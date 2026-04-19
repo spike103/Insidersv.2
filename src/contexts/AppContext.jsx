@@ -195,14 +195,72 @@ export function AppProvider({ children }) {
     })
   }
 
+  // Coins = nombre de paris gagnants (commence à 0)
+  const coins = useMemo(() => {
+    if (!user) return 0
+    return (user.bets || []).filter(b => b.status === 'won').length
+  }, [user])
+
+  // Notifications = insights non ignorés
+  const notifications = useMemo(() => {
+    if (!user) return []
+    const list = []
+    const bets = user.bets || []
+    const liveBets = bets.filter(b => b.betType === 'live' || b.mode === 'live')
+    if (liveBets.length >= 3) {
+      const liveRoi = liveBets.filter(b => b.status !== 'pending').length > 0
+        ? (liveBets.reduce((a, b) => a + (b.status === 'won' ? b.stake * (b.odd - 1) : b.status === 'lost' ? -b.stake : 0), 0) / liveBets.filter(b => b.status !== 'pending').reduce((a, b) => a + b.stake, 0)) * 100
+        : 0
+      if (liveRoi < -10 && !(user.alertsIgnored || []).includes('alert_live_sunday')) {
+        list.push({
+          id: 'alert_live_sunday',
+          kind: 'warning',
+          title: 'Les paris live te coûtent cher',
+          body: `Tu perds ${Math.abs(liveRoi).toFixed(1)}% de ROI sur tes paris live. Limite ce type de pari.`,
+        })
+      }
+    }
+    const wonToday = bets.filter(b => b.status === 'won' && new Date(b.date).toDateString() === new Date().toDateString()).length
+    if (wonToday >= 3) {
+      list.push({
+        id: 'alert_hot_today',
+        kind: 'success',
+        title: `🔥 ${wonToday} paris gagnés aujourd'hui`,
+        body: 'Belle série ! N\'augmente pas tes mises sous l\'excitation.',
+      })
+    }
+    return list
+  }, [user])
+
+  // Ajoute un joueur custom via Tennis page
+  const addCustomPlayer = ({ firstName, lastName, country, tour, rank, flag }) => {
+    if (!user) return
+    const name = `${firstName.trim()} ${lastName.trim()}`.trim()
+    if (!name) return
+    if (PLAYERS.some(p => p.name.toLowerCase() === name.toLowerCase())) return
+    if ((user.customPlayers || []).some(p => p.name.toLowerCase() === name.toLowerCase())) return
+    const id = `custom_p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+    const newPlayer = {
+      id, name,
+      tour: tour || 'ATP',
+      country: country || 'INT',
+      flag: flag || '🌍',
+      rank: rank ? Number(rank) : null,
+      bestSurface: 'Hard',
+      custom: true,
+    }
+    updateUser({ customPlayers: [...(user.customPlayers || []), newPlayer] })
+    return newPlayer
+  }
+
   const value = {
-    state, user, isAuth: !!user,
+    state, user, isAuth: !!user, coins, notifications,
     login, logout, resetCurrentUser, deleteCurrentUser,
     updateUser, setBankroll, setCurrency, setOnboardingDone,
     updateStrategy, updateGoals, ignoreAlert,
     addBet, updateBet, deleteBet, settleBet,
     addCustomBetType, removeCustomBetType, allBetTypes,
-    allPlayers, findPlayer, ensurePlayer, removeCustomPlayer,
+    allPlayers, findPlayer, ensurePlayer, removeCustomPlayer, addCustomPlayer,
     seedDemoData,
   }
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

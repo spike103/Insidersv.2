@@ -6,6 +6,14 @@ import { useApp } from '../contexts/AppContext.jsx'
 import { TOURNAMENTS, tournamentsByMonth } from '../data/tournaments.js'
 import { totalProfit, computeROI, formatCurrencyPrecise, formatPercent } from '../utils/stats.js'
 
+const FLAG_MAP = {
+  FRA:'🇫🇷',ESP:'🇪🇸',ITA:'🇮🇹',GER:'🇩🇪',USA:'🇺🇸',GBR:'🇬🇧',SRB:'🇷🇸',RUS:'🇷🇺',
+  AUS:'🇦🇺',ARG:'🇦🇷',CAN:'🇨🇦',POL:'🇵🇱',NOR:'🇳🇴',CHN:'🇨🇳',JPN:'🇯🇵',MEX:'🇲🇽',
+  SUI:'🇨🇭',AUT:'🇦🇹',NED:'🇳🇱',BEL:'🇧🇪',CZE:'🇨🇿',SVK:'🇸🇰',CRO:'🇭🇷',BUL:'🇧🇬',
+  GRE:'🇬🇷',HUN:'🇭🇺',DEN:'🇩🇰',SWE:'🇸🇪',BRA:'🇧🇷',CHI:'🇨🇱',TUN:'🇹🇳',IND:'🇮🇳',
+  BLR:'🇧🇾',UKR:'🇺🇦',KAZ:'🇰🇿',LAT:'🇱🇻',EST:'🇪🇪',ROU:'🇷🇴',INT:'🌍',
+}
+
 export default function Tennis() {
   const [tab, setTab] = useState('players')
   return (
@@ -14,11 +22,9 @@ export default function Tennis() {
       <div className="px-5 pt-2 pb-28">
         <div className="segmented mb-5">
           <button onClick={() => setTab('players')} className={`seg-btn ${tab === 'players' ? 'active' : ''}`}>
-            <Icon name="incognito" size={16} color={tab === 'players' ? 'white' : 'white'} />
             Joueurs
           </button>
           <button onClick={() => setTab('tournaments')} className={`seg-btn ${tab === 'tournaments' ? 'active' : ''}`}>
-            <Icon name="crown" size={16} color={tab === 'tournaments' ? 'white' : 'white'} />
             Tournois
           </button>
         </div>
@@ -30,9 +36,10 @@ export default function Tennis() {
 
 function PlayersTab() {
   const navigate = useNavigate()
-  const { user, allPlayers } = useApp()
+  const { user, allPlayers, addCustomPlayer } = useApp()
   const [search, setSearch] = useState('')
   const [tour, setTour] = useState('all')
+  const [showAdd, setShowAdd] = useState(false)
   const bets = user?.bets || []
 
   const statsByPlayer = useMemo(() => {
@@ -61,15 +68,21 @@ function PlayersTab() {
 
   return (
     <>
-      <div className="relative mb-4">
-        <input
-          type="text"
-          placeholder="Rechercher un joueur"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ paddingRight: 44 }}
-        />
-        <Icon name="incognito" size={20} className="absolute right-4 top-1/2 -translate-y-1/2" color="muted" />
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Rechercher un joueur"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingRight: 44 }}
+          />
+          <Icon name="incognito" size={20} className="absolute right-4 top-1/2 -translate-y-1/2" color="muted" />
+        </div>
+        <button onClick={() => setShowAdd(true)} className="btn-add" style={{ flexShrink: 0 }}>
+          <Icon name="add" size={14} color="white" />
+          Joueur
+        </button>
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
@@ -85,20 +98,19 @@ function PlayersTab() {
           const pBets = statsByPlayer[p.name] || []
           const profit = totalProfit(pBets)
           const roi = computeROI(pBets)
-          const initials = p.name.split(' ').map((s, i) => i === 0 ? s[0] + '.' : s).join('')
           return (
             <button
               key={p.id}
               onClick={() => navigate(`/players/${encodeURIComponent(p.name)}`)}
               className="card w-full p-3 flex items-center gap-3 text-left"
+              style={{ cursor: 'pointer' }}
             >
-              <div className="w-10 h-10 rounded-full bg-ink-700 flex items-center justify-center text-xl flex-shrink-0">
+              <div className="rounded-full flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, background: 'var(--ink-700)', fontSize: 20 }}>
                 {p.flag || '🌍'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="pill-label text-blue" style={{ fontSize: 14 }}>{initials}</span>
-                  {p.favorite && <Icon name="sparkle" size={12} color="gold" />}
+                  <span className="pill-label text-blue" style={{ fontSize: 14 }}>{p.name}</span>
                   {p.custom && <span className="micro text-fg-3" style={{ fontStyle: 'italic' }}>perso</span>}
                 </div>
                 <div className="micro text-fg-3 mt-0.5">
@@ -111,7 +123,7 @@ function PlayersTab() {
                     {formatCurrencyPrecise(profit)}
                   </div>
                   <div className="micro text-fg-3">
-                    {pBets.length} pari{pBets.length > 1 ? 's' : ''} · {formatPercent(roi)}
+                    {pBets.length} · {formatPercent(roi)}
                   </div>
                 </div>
               ) : (
@@ -121,11 +133,80 @@ function PlayersTab() {
           )
         })}
       </div>
+
+      {showAdd && <AddPlayerModal onClose={() => setShowAdd(false)} onAdd={addCustomPlayer} />}
     </>
   )
 }
 
+function AddPlayerModal({ onClose, onAdd }) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [country, setCountry] = useState('')
+  const [tour, setTour] = useState('ATP')
+  const [rank, setRank] = useState('')
+
+  const canSubmit = firstName.trim() && lastName.trim()
+
+  const submit = () => {
+    if (!canSubmit) return
+    const flag = country ? (FLAG_MAP[country.toUpperCase()] || '🌍') : '🌍'
+    onAdd({ firstName, lastName, country: country.toUpperCase() || 'INT', tour, rank, flag })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)' }} />
+      <div className="card relative w-full max-w-md animate-slide-up" style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: 20, maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="h2">Ajouter un joueur</h2>
+          <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'var(--ink-700)', border: 'none', cursor: 'pointer' }}>
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="field-label">Prénom</label>
+              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Carlos" />
+            </div>
+            <div>
+              <label className="field-label">Nom</label>
+              <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Alcaraz" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="field-label">Pays (3 lettres)</label>
+              <input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase().slice(0, 3))} placeholder="ESP" maxLength={3} />
+            </div>
+            <div>
+              <label className="field-label">Classement</label>
+              <input type="number" value={rank} onChange={(e) => setRank(e.target.value)} placeholder="42" />
+            </div>
+          </div>
+          <div>
+            <label className="field-label">Circuit</label>
+            <select value={tour} onChange={(e) => setTour(e.target.value)}>
+              <option value="ATP">ATP</option>
+              <option value="WTA">WTA</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose} className="btn-ghost" style={{ flex: 1 }}>Annuler</button>
+          <button onClick={submit} disabled={!canSubmit} className="btn-primary" style={{ flex: 1 }}>Ajouter</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TournamentsTab() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const grouped = useMemo(() => {
     const all = tournamentsByMonth()
@@ -154,50 +235,34 @@ function TournamentsTab() {
           <div key={g.month}>
             <div className="flex items-baseline gap-2 mb-3">
               <h2 className="h2">{g.label}</h2>
-              <span className="caption">({g.items.length} événement{g.items.length > 1 ? 's' : ''})</span>
+              <span className="caption">({g.items.length})</span>
             </div>
             <div className="space-y-2">
-              {g.items.map((t, idx) => <TournamentRow key={t.id} tournament={t} index={idx + 1} />)}
+              {g.items.map((t, idx) => (
+                <button
+                  key={t.id}
+                  onClick={() => navigate(`/tournaments/${t.id}`)}
+                  className={t.isPrestige ? 'card-gold' : 'card'}
+                  style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, width: '100%', border: t.isPrestige ? 'none' : '1px solid var(--ink-600)', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 20, minWidth: 36, color: t.isPrestige ? '#1a0f00' : 'var(--fg-1)' }}>#{idx + 1}</div>
+                  <div className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, background: t.isPrestige ? 'rgba(255,255,255,0.35)' : 'var(--ink-700)', fontSize: 18 }}>
+                    {t.flag}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="pill-label truncate" style={{ fontSize: 15, color: t.isPrestige ? '#1a0f00' : 'var(--blue-500)' }}>
+                      {t.name}
+                    </div>
+                    <div className="caption" style={{ color: t.isPrestige ? '#3d2a00' : 'var(--fg-3)' }}>
+                      {t.category} · {t.dates}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         ))}
       </div>
     </>
-  )
-}
-
-function TournamentRow({ tournament: t, index }) {
-  const prestige = t.isPrestige
-  return (
-    <div className={prestige ? 'card-gold' : 'card'} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ fontWeight: 700, fontSize: 20, minWidth: 36, color: prestige ? '#1a0f00' : 'var(--fg-1)' }}>#{index}</div>
-      <div
-        className="rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{
-          width: 40, height: 40,
-          background: prestige ? 'rgba(255,255,255,0.35)' : 'var(--ink-700)',
-          fontSize: 18,
-        }}
-      >
-        {t.flag}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div
-          className="pill-label truncate"
-          style={{
-            fontSize: 15,
-            color: prestige ? '#1a0f00' : 'var(--blue-500)',
-          }}
-        >
-          {t.name}
-        </div>
-        <div
-          className="caption"
-          style={{ color: prestige ? '#3d2a00' : 'var(--fg-3)' }}
-        >
-          {t.category} · {t.dates}
-        </div>
-      </div>
-    </div>
   )
 }

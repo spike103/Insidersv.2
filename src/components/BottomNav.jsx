@@ -2,11 +2,23 @@ import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from './Icon.jsx'
 
+// Icône balle de tennis custom
+function TennisBall({ size = 24, color = 'white', active = false }) {
+  const stroke = active ? '#2962ff' : color
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: active ? 1 : 0.85 }}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M5.2 5.2c2.3 1.5 4 4.1 4 7s-1.7 5.5-4 7" />
+      <path d="M18.8 5.2c-2.3 1.5-4 4.1-4 7s1.7 5.5 4 7" />
+    </svg>
+  )
+}
+
 const items = [
-  { path: '/', icon: 'dashboard', label: 'Mes paris' },
-  { path: '/matchs', icon: 'match', label: 'Matchs' },
-  { path: '/tennis', icon: 'crown', label: 'Tennis' },
-  { path: '/stats', icon: 'chart_bar', label: 'Stats' },
+  { path: '/', key: 'bets', icon: 'dashboard', label: 'Mes paris' },
+  { path: '/matchs', key: 'matchs', icon: 'match', label: 'Matchs' },
+  { path: '/tennis', key: 'tennis', icon: 'tennis-ball', label: 'Tennis' },
+  { path: '/stats', key: 'stats', icon: 'chart_bar', label: 'Stats' },
 ]
 
 export default function BottomNav() {
@@ -14,10 +26,10 @@ export default function BottomNav() {
   const location = useLocation()
   const path = location.pathname
 
-  const isActive = (p) => {
-    if (p === '/') return path === '/'
-    if (p === '/tennis') return path.startsWith('/tennis') || path.startsWith('/players') || path.startsWith('/tournaments')
-    return path.startsWith(p)
+  const isActive = (item) => {
+    if (item.path === '/') return path === '/'
+    if (item.path === '/tennis') return path.startsWith('/tennis') || path.startsWith('/players') || path.startsWith('/tournaments')
+    return path.startsWith(item.path)
   }
 
   return (
@@ -28,20 +40,26 @@ export default function BottomNav() {
         borderTop: '1px solid rgba(28, 51, 112, 0.6)',
       }}
     >
-      <div className="relative flex items-center justify-around h-16 px-4 pt-2">
-        {items.slice(0, 2).map((item) => <NavItem key={item.path} item={item} active={isActive(item.path)} onClick={() => navigate(item.path)} />)}
-        <div style={{ width: 56 }} aria-hidden />
-        {items.slice(2).map((item) => <NavItem key={item.path} item={item} active={isActive(item.path)} onClick={() => navigate(item.path)} />)}
+      <div className="relative flex items-center h-16 px-2 pt-2">
+        {items.slice(0, 2).map((item) => <NavItem key={item.key} item={item} active={isActive(item)} onClick={() => navigate(item.path)} />)}
+        <div style={{ flex: 1 }} aria-hidden />
+        {items.slice(2).map((item) => <NavItem key={item.key} item={item} active={isActive(item)} onClick={() => navigate(item.path)} />)}
+
         <button
           onClick={() => navigate('/add-bet')}
           aria-label="Ajouter un pari"
-          className="absolute left-1/2 -translate-x-1/2 -top-6 w-14 h-14 rounded-full flex items-center justify-center"
+          className="absolute left-1/2 -top-5 flex items-center justify-center"
           style={{
+            width: 56, height: 56, borderRadius: '50%',
+            transform: 'translateX(-50%)',
             background: 'var(--blue-500)',
-            boxShadow: '0 0 30px rgba(41,98,255,0.7), 0 0 12px rgba(91, 131, 255, 0.5)',
+            boxShadow: '0 0 24px rgba(41,98,255,0.6), 0 6px 16px rgba(41,98,255,0.35)',
+            border: 'none', cursor: 'pointer',
           }}
         >
-          <Icon name="add" size={26} color="white" />
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
         </button>
       </div>
     </nav>
@@ -49,21 +67,21 @@ export default function BottomNav() {
 }
 
 function NavItem({ item, active, onClick }) {
+  const iconColor = active ? 'blue' : 'white'
   return (
     <button
       onClick={onClick}
       className="flex-1 flex flex-col items-center justify-center gap-1 h-full"
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
     >
-      <Icon
-        name={item.icon}
-        size={24}
-        color={active ? 'blue' : 'white'}
-        style={{ opacity: active ? 1 : 0.85 }}
-      />
+      {item.icon === 'tennis-ball'
+        ? <TennisBall size={24} active={active} />
+        : <Icon name={item.icon} size={24} color={iconColor} style={{ opacity: active ? 1 : 0.85 }} />
+      }
       <span
-        className="micro"
         style={{
-          color: 'var(--blue-500)', fontWeight: 600, fontSize: 10,
+          color: 'var(--blue-500)',
+          fontWeight: 600, fontSize: 10,
           opacity: active ? 1 : 0,
           height: 12,
           transition: 'opacity 180ms',

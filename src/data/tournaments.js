@@ -85,10 +85,18 @@ export const CATEGORIES = [
   { id: 'Équipes', label: 'Coupes', color: '#22c55e' },
 ]
 
-// Retourne les tournois actifs à une date donnée (format YYYY-MM-DD)
+// Retourne les tournois actifs à une date donnée (YYYY-MM-DD)
+// On compare sur mois+jour seulement (l'année peut varier, le calendrier tennis est annuel)
 export function tournamentsOnDate(dateStr) {
   if (!dateStr) return []
-  return TOURNAMENTS.filter(t => dateStr >= t.start && dateStr <= t.end)
+  const md = dateStr.slice(5) // "MM-DD"
+  return TOURNAMENTS.filter(t => {
+    const startMd = t.start.slice(5)
+    const endMd = t.end.slice(5)
+    // Gérer le chevauchement d'année (peu probable ici, mais safe)
+    if (startMd <= endMd) return md >= startMd && md <= endMd
+    return md >= startMd || md <= endMd
+  })
 }
 
 // Regroupe par mois pour l'affichage

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar.jsx'
 import BetCard from '../components/BetCard.jsx'
 import Icon from '../components/Icon.jsx'
@@ -13,8 +14,11 @@ const FILTERS = [
 ]
 
 export default function Matchs() {
+  const navigate = useNavigate()
   const { user, settleBet, deleteBet } = useApp()
   const [filter, setFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const bets = useMemo(() => {
     let list = [...(user?.bets || [])].sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -22,8 +26,11 @@ export default function Matchs() {
     else if (filter === 'won') list = list.filter(b => b.status === 'won')
     else if (filter === 'lost') list = list.filter(b => b.status === 'lost')
     else if (filter === 'live') list = list.filter(b => b.betType === 'live' || b.mode === 'live')
+
+    if (dateFrom) list = list.filter(b => b.date.slice(0, 10) >= dateFrom)
+    if (dateTo) list = list.filter(b => b.date.slice(0, 10) <= dateTo)
     return list
-  }, [user, filter])
+  }, [user, filter, dateFrom, dateTo])
 
   const groups = useMemo(() => {
     const map = {}
@@ -40,17 +47,29 @@ export default function Matchs() {
     <>
       <TopBar title="Mes matchs" />
       <div className="px-5 pt-2 pb-28">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-5 -mx-1 px-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4 -mx-1 px-1">
           {FILTERS.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`chip flex-shrink-0 ${filter === f.id ? 'active' : ''}`}
-            >
+            <button key={f.id} onClick={() => setFilter(f.id)} className={`chip flex-shrink-0 ${filter === f.id ? 'active' : ''}`}>
               {f.label}
             </button>
           ))}
         </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          <div>
+            <label className="field-label">Du</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div>
+            <label className="field-label">Au</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: '100%' }} />
+          </div>
+        </div>
+        {(dateFrom || dateTo) && (
+          <button onClick={() => { setDateFrom(''); setDateTo('') }} className="chip mb-4" style={{ fontSize: 11, color: 'var(--loss-500)' }}>
+            <Icon name="close" size={10} /> Effacer dates
+          </button>
+        )}
 
         {groups.length === 0 ? (
           <div className="card p-8 text-center">
@@ -64,15 +83,15 @@ export default function Matchs() {
               <div key={g.label}>
                 <div className="flex items-center gap-2 mb-3">
                   <Icon name="calendar-clock" size={14} color="muted" />
-                  <h3 className="micro text-fg-3" style={{ fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {g.label}
-                  </h3>
+                  <h3 className="micro text-fg-3" style={{ fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{g.label}</h3>
                   <div className="flex-1 h-px" style={{ background: 'var(--ink-600)' }} />
                   <span className="micro text-fg-3">{g.items.length}</span>
                 </div>
                 <div className="space-y-2">
                   {g.items.map(bet => (
-                    <BetCard key={bet.id} bet={bet} onSettle={settleBet} onDelete={deleteBet} />
+                    <div key={bet.id} onClick={() => navigate(`/matchs/${bet.id}`)} style={{ cursor: 'pointer' }}>
+                      <BetCard bet={bet} onSettle={settleBet} onDelete={deleteBet} />
+                    </div>
                   ))}
                 </div>
               </div>

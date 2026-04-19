@@ -50,6 +50,7 @@ const INLINE = {
   info: (<><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>),
   match: (<><circle cx="12" cy="12" r="10" /><path d="M18.09 5.91A7 7 0 015.91 18.09M5.91 5.91A7 7 0 0018.09 18.09" /></>),
   live: (<><circle cx="12" cy="12" r="3" fill="currentColor" /><circle cx="12" cy="12" r="7" /></>),
+  shield: (<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />),
 }
 
 export default function Icon({ name, size = 20, color = 'white', className = '', style, stroke = 'currentColor', strokeWidth = 2, fill = 'none' }) {
